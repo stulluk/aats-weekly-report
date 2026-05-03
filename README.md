@@ -59,7 +59,7 @@ If the reader shows rows for that date, you **did have saved data** for that rep
 | --- | --- |
 | `AML_USER` | Login user (email tab); `@amlogic.com` appended when missing. |
 | `AML_PWD` | Password for the same login. |
-| `AATS_BASE_URL` | Optional override; default **`http://aats.amlogic.com`** (port 80, same host your `wget` used). Some setups use **`http://aats.amlogic.com:12000`** — set this variable if yours does. |
+| `AATS_BASE_URL` | Optional override; default **`http://aats.amlogic.com`**. |
 
 Never commit real credentials. Use a local env file or your shell profile.
 
