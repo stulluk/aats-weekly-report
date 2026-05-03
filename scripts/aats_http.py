@@ -128,6 +128,46 @@ def post_table_list(
     return payload
 
 
+def save_report(
+    session: AatsSession,
+    *,
+    sumup_json: str,
+    issue_json: str = "[]",
+    plan_json: str = "[]",
+    remove_sumup: str = "",
+    remove_issue: str = "",
+    remove_plan: str = "",
+) -> str:
+    """
+    POST /weekly_sumup_fae/save_report (same shape as the Vue/jQuery UI).
+
+    Body uses application/x-www-form-urlencoded with JSON strings for sumup,
+    issue, and plan. Response is typically the plain text ``success`` or a
+    short error / session message.
+    """
+    path = "/weekly_sumup_fae/save_report"
+    url = urllib.parse.urljoin(session.base_url, path)
+    fields = {
+        "sumup": sumup_json,
+        "issue": issue_json,
+        "plan": plan_json,
+        "removeSumup": remove_sumup,
+        "removeIssue": remove_issue,
+        "removePlan": remove_plan,
+    }
+    body = urllib.parse.urlencode(fields).encode("utf-8")
+    req = urllib.request.Request(url=url, data=body, method="POST")
+    req.add_header("Content-Type", "application/x-www-form-urlencoded")
+    req.add_header("X-Requested-With", "XMLHttpRequest")
+    req.add_header("Referer", urllib.parse.urljoin(session.base_url, "/weekly_sumup_fae/main"))
+    try:
+        with session.opener.open(req, timeout=120) as resp:
+            return resp.read().decode("utf-8", errors="replace")
+    except urllib.error.HTTPError as exc:
+        detail = exc.read().decode("utf-8", errors="replace")
+        raise RuntimeError(f"save_report HTTP {exc.code}: {detail[:4000]}") from exc
+
+
 def open_aats(base_url: str) -> AatsSession:
     """Construct a session with a fresh cookie jar."""
     base = base_url.rstrip("/") + "/"

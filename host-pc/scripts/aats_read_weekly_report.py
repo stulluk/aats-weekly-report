@@ -99,11 +99,12 @@ def run(args: argparse.Namespace) -> int:
         fetch_all=args.fetch_all,
     )
 
-    print(f"AATS report date: {report_date}")
-    print(f"Resolved user id={user_id} department id={department_id}")
     if args.dump_json:
         print(json.dumps(payload, ensure_ascii=False, indent=2))
         return 0
+
+    print(f"AATS report date: {report_date}")
+    print(f"Resolved user id={user_id} department id={department_id}")
 
     sumup_block = payload.get("sumup") if isinstance(payload, dict) else None
     issue_block = payload.get("issue") if isinstance(payload, dict) else None

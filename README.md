@@ -51,6 +51,17 @@ If the reader shows rows for that date, you **did have saved data** for that rep
 - **Writing / Save**: The UI builds a payload in JavaScript and `POST`s to `/weekly_sumup_fae/save_report` with `sumup`, `issue`, `plan` as **JSON strings** plus remove-* keys. In principle **curl can submit the same POST** if you reproduce that JSON exactly (including `project.id`, overdue reason ids, validation rules). The fragile parts are **Vue treeselect / dynamic rows** and server-side validation; a browser driver is more forgiving but heavier.
 - **Practical split**: use **HTTP** for login + read + id discovery; add either **carefully crafted curl** or **Playwright** only for submit once the payload is stable.
 
+### Comment / “Others” text field
+
+In the `table/list` JSON, the free-text comment for a row (including **Others**)
+is stored under **`notes`**, not `statement` (which is the main task line).
+
+Experimental writer: `host-pc/scripts/aats_try_append_sumup_notes.py`. A first
+server trial returned **HTTP 500** (`WeeklySumup.getWorkType()` null), which
+means the **save JSON shape still does not match** what the Spring controller
+expects—capture a real **Save** request from the browser (copy as **fetch** /
+**curl**) and align field names / nesting, or drive the UI with Playwright.
+
 ---
 
 ## Environment variables
