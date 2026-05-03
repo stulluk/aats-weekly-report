@@ -15,6 +15,8 @@ Shared HTTP helpers live in `scripts/` (Python 3, stdlib only).
 
 **Script:** `host-pc/scripts/aats_read_weekly_report.py`
 
+**Order of operations (same idea as the browser):** you must **log in first**, then the tool loads the weekly shell and calls **`table/list`** for the chosen report date. There is no separate “anonymous read” of your draft; the session cookie from login is required.
+
 It:
 
 1. `POST /weekly_sumup_fae/user/login/ad` with `AML_USER` / `AML_PWD` (same semantics as the web “Email” tab: user name may omit `@amlogic.com`).
@@ -57,7 +59,7 @@ If the reader shows rows for that date, you **did have saved data** for that rep
 | --- | --- |
 | `AML_USER` | Login user (email tab); `@amlogic.com` appended when missing. |
 | `AML_PWD` | Password for the same login. |
-| `AATS_BASE_URL` | Optional override, default `http://aats.amlogic.com:12000`. |
+| `AATS_BASE_URL` | Optional override; default **`http://aats.amlogic.com`** (port 80, same host your `wget` used). Some setups use **`http://aats.amlogic.com:12000`** — set this variable if yours does. |
 
 Never commit real credentials. Use a local env file or your shell profile.
 

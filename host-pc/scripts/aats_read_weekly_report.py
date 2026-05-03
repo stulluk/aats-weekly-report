@@ -133,7 +133,7 @@ def run(args: argparse.Namespace) -> int:
 
 def build_parser() -> argparse.ArgumentParser:
     """Configure CLI flags."""
-    default_base = os.getenv("AATS_BASE_URL", "http://aats.amlogic.com:12000").rstrip("/")
+    default_base = os.getenv("AATS_BASE_URL", "http://aats.amlogic.com").rstrip("/")
     parser = argparse.ArgumentParser(description="Read AATS weekly report rows (HTTP, no browser).")
     parser.add_argument(
         "--base-url",
