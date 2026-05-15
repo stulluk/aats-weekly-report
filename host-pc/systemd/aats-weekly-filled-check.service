@@ -1,0 +1,11 @@
+[Unit]
+Description=AATS weekly sumup filled check and ntfy publish
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+Environment=TZ=Europe/Istanbul
+EnvironmentFile=-%h/.config/aats-weekly-notify.env
+# FortiClient is not started from this unit; ensure VPN is up before 11:00 (Fri/Sat/Sun) or chain After= your VPN unit.
+ExecStart=/bin/bash -c 'exec "${REPO_ROOT}/host-pc/scripts/aats_notify_check.sh"'

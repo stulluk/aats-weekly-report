@@ -1,0 +1,13 @@
+[Unit]
+Description=Fri/Sat/Sun 11:00 — AATS weekly copy, save, verify (user timer)
+
+[Timer]
+OnCalendar=Fri *-*-* 11:00:00
+OnCalendar=Sat *-*-* 11:00:00
+OnCalendar=Sun *-*-* 11:00:00
+Persistent=true
+AccuracySec=2min
+Unit=aats-weekly-filled-check.service
+
+[Install]
+WantedBy=timers.target
