@@ -197,15 +197,17 @@ On **Python 3.8** (dumpling), `zoneinfo` may be missing; Istanbul falls back to 
 
 Topic: **`aats-weekly-sumup-fae`**
 
+Every title is prefixed with **`[HOST_TAG]`** so you can tell which machine sent the notification, e.g. `[amdpc] AATS OK — saved and verified (2026-06-07)` vs `[dumpling] AATS OK — report 2026-06-07 already saved`. Set `AATS_HOST_TAG` in the env file (otherwise it falls back to `hostname -s`).
+
 | Title (roughly) | Meaning |
 | --- | --- |
-| `AATS OK — saved and verified (DATE)` | Copy, save, and read-back all matched |
-| `AATS OK — report DATE already saved` | Real rows were already there; no duplicate save |
-| `AATS FAIL — save did not verify (DATE)` | Save ran but substantive rows missing after verify |
-| `AATS ERROR (DATE)` | Login or other hard failure |
-| `AATS unreachable (VPN / network)` | Host preflight could not reach `.../main` |
+| `[HOST] AATS OK — saved and verified (DATE)` | Copy, save, and read-back all matched |
+| `[HOST] AATS OK — report DATE already saved` | Real rows were already there; no duplicate save |
+| `[HOST] AATS FAIL — save did not verify (DATE)` | Save ran but substantive rows missing after verify |
+| `[HOST] AATS ERROR (DATE)` | Login or other hard failure |
+| `[HOST] AATS unreachable (VPN / network)` | Host preflight could not reach `.../main` |
 
-Body always includes **calendar today**, **write-date (AATS label)**, and **copy-last-week source date**.
+Body always includes **Host**, **calendar today**, **write-date (AATS label)**, and **copy-last-week candidate date**.
 
 ---
 
@@ -246,6 +248,7 @@ Compare script output with the browser for the **same write-date** field on the 
 | `NTFY_URL` | Full topic URL, e.g. `https://ntfy.sh/aats-weekly-sumup-fae` |
 | `AATS_REPORT_DATE` | Force write-date `YYYY-MM-DD` (optional; default is `filing_week_label_iso`) |
 | `AATS_MAX_WEEKS_BACK` | Scan up to N prior weeks for substantive data when target-7 is empty (default `4`) |
+| `AATS_HOST_TAG` | Label prefix in ntfy / desktop titles, e.g. `[amdpc]`. Defaults to `hostname -s`. Override per machine. |
 | `AATS_VPN_PREFLIGHT` | `1` on host PC: fail fast if AATS main page unreachable |
 | `AATS_NOTIFY_DESKTOP` | `1` on host: also `notify-send` |
 | `AATS_SKIP_SAVE` | `1`: legacy check-only path (no copy/save) |

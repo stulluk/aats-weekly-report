@@ -3,7 +3,9 @@
 #
 # Required: REPO_ROOT, AML_USER, AML_PWD, NTFY_URL
 # Optional: AATS_BASE_URL, AATS_REPORT_DATE (target write-date), AATS_VPN_PREFLIGHT=1 (host PC),
-#           AATS_NOTIFY_DESKTOP=1, AATS_SKIP_SAVE=1 (check-only legacy path)
+#           AATS_NOTIFY_DESKTOP=1, AATS_SKIP_SAVE=1 (check-only legacy path),
+#           AATS_HOST_TAG (label prefix in ntfy title; defaults to `hostname -s`),
+#           AATS_MAX_WEEKS_BACK (scan window when target-7 is empty; default 4)
 
 set -u
 export TZ="${TZ:-Europe/Istanbul}"
@@ -16,6 +18,9 @@ export TZ="${TZ:-Europe/Istanbul}"
 BASE_URL="${AATS_BASE_URL:-http://aats.amlogic.com}"
 PY_SAVE="${REPO_ROOT}/host-pc/scripts/aats_weekly_copy_save_verify.py"
 export PYTHONPATH="${REPO_ROOT}/scripts${PYTHONPATH:+:${PYTHONPATH}}"
+
+HOST_TAG="${AATS_HOST_TAG:-$(hostname -s 2>/dev/null || hostname 2>/dev/null || echo host)}"
+_tag_title() { printf '[%s] %s' "${HOST_TAG}" "$1"; }
 
 date_args=()
 if [[ -n "${AATS_REPORT_DATE:-}" ]]; then
@@ -33,7 +38,9 @@ tmp_err="$(mktemp)"
 trap 'rm -f "${tmp_out}" "${tmp_err}"' EXIT
 
 _send_ntfy() {
-  local title="$1" priority="$2" body="$3"
+  local title
+  title="$(_tag_title "$1")"
+  local priority="$2" body="$3"
   set +e
   printf '%s' "${body}" | curl -fsS -o /dev/null \
     -H "Title: ${title}" \
@@ -50,7 +57,9 @@ _send_ntfy() {
 }
 
 _desktop() {
-  local title="$1" desk="$2"
+  local title
+  title="$(_tag_title "$1")"
+  local desk="$2"
   if [[ "${AATS_NOTIFY_DESKTOP:-0}" == "1" ]] && command -v notify-send >/dev/null 2>&1; then
     desk="${desk:0:600}"
     notify-send -u normal -- "${title}" "${desk}" 2>/dev/null || true
@@ -83,7 +92,8 @@ if [[ "${AATS_SKIP_SAVE:-0}" == "1" ]]; then
     title="AATS check failed (${REPORT_DATE})"
     priority="urgent"
   fi
-  body="Calendar today: ${CALENDAR_TODAY}
+  body="Host: ${HOST_TAG}
+Calendar today: ${CALENDAR_TODAY}
 Write-date checked: ${REPORT_DATE}
 Copy source would be: ${COPY_SOURCE}
 
@@ -123,7 +133,8 @@ else
   priority="urgent"
 fi
 
-body="Calendar today: ${CALENDAR_TODAY}
+body="Host: ${HOST_TAG}
+Calendar today: ${CALENDAR_TODAY}
 Write-date (AATS label): ${REPORT_DATE}
 Copy candidate (target-7d): ${COPY_SOURCE}
 Scan window: up to ${AATS_MAX_WEEKS_BACK:-4} prior week(s)
