@@ -382,6 +382,36 @@ def build_issue_plan_rows_for_save(
     return out
 
 
+def find_recent_filled_source(
+    session: AatsSession,
+    user_id: str,
+    department_id: str,
+    target_label: str,
+    *,
+    max_weeks_back: int = 4,
+) -> tuple[str | None, dict[str, Any] | None, list[dict[str, Any]]]:
+    """
+    Walk back week-by-week from ``target_label - 7d`` and return the first week
+    that has substantive sumup rows.
+
+    Returns ``(date_iso, payload, scan_trace)``. ``scan_trace`` lists each
+    visited week with its substantive count for diagnostics.
+    When no week within ``max_weeks_back`` qualifies, returns ``(None, None, scan_trace)``.
+    """
+    if max_weeks_back < 1:
+        max_weeks_back = 1
+    trace: list[dict[str, Any]] = []
+    candidate = previous_report_date(target_label)
+    for _ in range(max_weeks_back):
+        payload = post_table_list(session, user_id, department_id, candidate)
+        substantive = count_substantive_sumups(payload)
+        trace.append({"date": candidate, "substantive": substantive})
+        if substantive > 0:
+            return candidate, payload, trace
+        candidate = previous_report_date(candidate)
+    return None, None, trace
+
+
 def copy_last_week_and_save(
     session: AatsSession,
     user_id: str,
@@ -389,15 +419,22 @@ def copy_last_week_and_save(
     target_label: str | None = None,
     *,
     zone: str = "Europe/Istanbul",
+    max_weeks_back: int = 1,
 ) -> dict[str, Any]:
     """
-    Copy last week (``table/list`` at ``target - 7 days``), POST ``save_report``, re-read and verify.
+    Copy data from the most recent filled prior week into ``target_label`` and SAVE.
 
-    Returns a result dict with ``ok``, ``target_label``, ``source_label``, ``save_response``,
-    ``verify_rows``, ``substantive``, ``already_filled``.
+    With ``max_weeks_back == 1`` this is the classic ``target - 7d`` behavior.
+    With larger values, the helper scans back week-by-week until it finds a
+    prior week with substantive sumups (or gives up).
+
+    Returns a result dict with ``ok``, ``target_label``, ``source_label`` (the
+    week actually copied from), ``immediate_source`` (always ``target - 7d``),
+    ``save_response``, ``verify_rows``, ``substantive``, ``already_filled``,
+    and ``scan_trace`` when scanning was performed.
     """
     target = (target_label or filing_week_label_iso(zone)).strip()
-    source = previous_report_date(target)
+    immediate_source = previous_report_date(target)
     week_num = iso_week_number_str(target)
 
     current = post_table_list(session, user_id, department_id, target)
@@ -407,14 +444,47 @@ def copy_last_week_and_save(
             "ok": True,
             "already_filled": True,
             "target_label": target,
-            "source_label": source,
+            "source_label": immediate_source,
+            "immediate_source": immediate_source,
             "calendar_today": calendar_today_iso(zone),
             "save_response": "",
             "verify_rows": len(sumup_rows_from_payload(current)),
             "substantive": substantive_before,
         }
 
-    prev_payload = post_table_list(session, user_id, department_id, source)
+    scan_trace: list[dict[str, Any]] = []
+    if max_weeks_back <= 1:
+        prev_payload = post_table_list(session, user_id, department_id, immediate_source)
+        chosen_source = immediate_source
+        scan_trace.append(
+            {"date": immediate_source, "substantive": count_substantive_sumups(prev_payload)}
+        )
+    else:
+        chosen_source, prev_payload, scan_trace = find_recent_filled_source(
+            session,
+            user_id,
+            department_id,
+            target,
+            max_weeks_back=max_weeks_back,
+        )
+        if chosen_source is None or prev_payload is None:
+            return {
+                "ok": False,
+                "already_filled": False,
+                "target_label": target,
+                "source_label": immediate_source,
+                "immediate_source": immediate_source,
+                "calendar_today": calendar_today_iso(zone),
+                "save_response": "",
+                "verify_rows": 0,
+                "substantive": 0,
+                "error": (
+                    f"No substantive rows in the previous {max_weeks_back} week(s)."
+                ),
+                "scan_trace": scan_trace,
+                "weeks_back_scanned": max_weeks_back,
+            }
+
     sumups, issues, plans = build_copy_last_week_rows(prev_payload, target)
     save_sumups = [r for r in sumups if row_has_substantive_content(r)]
     if not save_sumups:
@@ -422,12 +492,14 @@ def copy_last_week_and_save(
             "ok": False,
             "already_filled": False,
             "target_label": target,
-            "source_label": source,
+            "source_label": chosen_source,
+            "immediate_source": immediate_source,
             "calendar_today": calendar_today_iso(zone),
             "save_response": "",
             "verify_rows": 0,
             "substantive": 0,
-            "error": "No substantive rows in previous week to copy.",
+            "error": "No substantive rows in chosen source week to copy.",
+            "scan_trace": scan_trace,
         }
 
     save_rows = [build_sumup_row_for_save(r, target, week_num) for r in save_sumups]
@@ -445,12 +517,14 @@ def copy_last_week_and_save(
             "ok": False,
             "already_filled": False,
             "target_label": target,
-            "source_label": source,
+            "source_label": chosen_source,
+            "immediate_source": immediate_source,
             "calendar_today": calendar_today_iso(zone),
             "save_response": save_response,
             "verify_rows": 0,
             "substantive": 0,
             "error": f"save_report returned {save_response!r}",
+            "scan_trace": scan_trace,
         }
 
     verify = post_table_list(session, user_id, department_id, target)
@@ -459,12 +533,14 @@ def copy_last_week_and_save(
         "ok": substantive > 0,
         "already_filled": False,
         "target_label": target,
-        "source_label": source,
+        "source_label": chosen_source,
+        "immediate_source": immediate_source,
         "calendar_today": calendar_today_iso(zone),
         "save_response": save_response,
         "verify_rows": len(sumup_rows_from_payload(verify)),
         "substantive": substantive,
         "copied_rows": len(save_rows),
+        "scan_trace": scan_trace,
     }
 
 

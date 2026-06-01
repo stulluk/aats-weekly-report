@@ -53,9 +53,14 @@ def run(args: argparse.Namespace) -> int:
     user_id, department_id, _ = extract_table_list_context(html)
 
     if args.dry_run:
+        scan_note = (
+            f", scan up to {args.max_weeks_back} prior week(s) if empty"
+            if args.max_weeks_back > 1
+            else ""
+        )
         print(
             f"DRY RUN: would copy from {source} → save target {target} "
-            f"(calendar today {today})"
+            f"(calendar today {today}{scan_note})"
         )
         return 0
 
@@ -65,6 +70,7 @@ def run(args: argparse.Namespace) -> int:
         department_id,
         target_label=target,
         zone=zone,
+        max_weeks_back=args.max_weeks_back,
     )
 
     print(json.dumps(result, ensure_ascii=False, indent=2))
@@ -79,8 +85,15 @@ def run(args: argparse.Namespace) -> int:
                 f"(calendar today {today})"
             )
         else:
+            chosen = result.get("source_label")
+            note = (
+                f" (scanned back to {chosen})"
+                if chosen and chosen != source
+                else ""
+            )
             print(
-                f"OK saved and verified: target={target} copied_rows={result.get('copied_rows')} "
+                f"OK saved and verified: target={target} from={chosen}{note} "
+                f"copied_rows={result.get('copied_rows')} "
                 f"substantive={result.get('substantive')} save={result.get('save_response')!r}"
             )
         return 0
@@ -96,6 +109,15 @@ def run(args: argparse.Namespace) -> int:
     return 1
 
 
+def _parse_max_weeks_back_env() -> int:
+    raw = os.getenv("AATS_MAX_WEEKS_BACK", "4").strip()
+    try:
+        value = int(raw)
+    except ValueError:
+        value = 4
+    return max(1, value)
+
+
 def build_parser() -> argparse.ArgumentParser:
     default_base = os.getenv("AATS_BASE_URL", "http://aats.amlogic.com").rstrip("/")
     p = argparse.ArgumentParser(description="Copy last week, SAVE, verify AATS weekly report.")
@@ -104,6 +126,15 @@ def build_parser() -> argparse.ArgumentParser:
         "--date",
         default="",
         help="Target write-date YYYY-MM-DD (default: filing_week_label_iso / upcoming Sunday).",
+    )
+    p.add_argument(
+        "--max-weeks-back",
+        type=int,
+        default=_parse_max_weeks_back_env(),
+        help=(
+            "Scan up to N prior weeks for substantive data when target-7 is empty. "
+            "Default 4 (env: AATS_MAX_WEEKS_BACK)."
+        ),
     )
     p.add_argument("--dry-run", action="store_true")
     return p

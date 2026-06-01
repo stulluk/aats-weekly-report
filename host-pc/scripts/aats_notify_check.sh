@@ -125,7 +125,8 @@ fi
 
 body="Calendar today: ${CALENDAR_TODAY}
 Write-date (AATS label): ${REPORT_DATE}
-Copy-last-week source: ${COPY_SOURCE}
+Copy candidate (target-7d): ${COPY_SOURCE}
+Scan window: up to ${AATS_MAX_WEEKS_BACK:-4} prior week(s)
 
 ${out_txt}"
 if [[ -n "${err_txt}" ]]; then
