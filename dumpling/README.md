@@ -2,6 +2,8 @@
 
 No FortiClient; scheduling is plain **`crontab`**. Use the same **topic** path as on your PC: `aats-weekly-sumup-fae`.
 
+For the full story (save pitfalls, date trap, Host PC vs Dumpling), see the root [`README.md`](../README.md).
+
 ## Friday 08:30 — AATS filled check + ntfy (no desktop)
 
 1. Ensure this repo is cloned on dumpling and Python 3 is available.
